@@ -5,7 +5,6 @@
 // @description     虹覧に新着レス数を追加する
 // @grant           GM_getValue
 // @grant           GM_setValue
-// @grant           GM_log
 // @include         http://futaba.qs.cjb.net/nijiran/*
 // @include         http://*.2chan.net/b/res/*
 // ==/UserScript==
@@ -49,7 +48,7 @@
         resNew = "!";
       }
       node.childNodes[1].innerHTML =
-        "<span style=\"\">" + resnum + resNew + "</span>";
+        "<span style=\"font-size:9pt\">" + resnum + resNew + "</span>";
       // 見つかったエントリにはhittestをセットする
       count[href] = resnum;
       hittest[href] = true;
