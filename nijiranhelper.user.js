@@ -39,13 +39,13 @@
         if (diff > 0) {
           resNew = "(<span style=\"color:#ff0000\">+" + diff + "</span>)";
         } else if (diff == 0) {
-          resNew = "*";
+          resNew = "=";
         } else { // diff < 0
           resNew = "(<span style=\"color:#0000ff\">" + diff + "</span>)";
         }
       } else {
         // 新着エントリ
-        resNew = "!";
+        resNew = "*";
       }
       node.childNodes[1].innerHTML =
         "<span style=\"font-size:9pt\">" + resnum + resNew + "</span>";

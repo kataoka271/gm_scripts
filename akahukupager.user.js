@@ -109,24 +109,28 @@
   }
 
   function makeImageView() {
-    var nodes = XPath("//a[@href]/img");
-    var doc = window.open().document.open();
-    doc.write("<html><head></head><body>");
-    doc.write('<style type="text/css">\n' +
-        'body { background-color: black; text-align: center; }\n' +
-        'img { border: none; }\n' +
-        '</style>');
-    var re = /^http:\/\/[0-9A-Za-z]+\.2chan\.net\//;
-    for (var i = 0; i < nodes.length; i++) {
-      var node = nodes[i];
-      if (re.exec(node.parentNode.href)) {
-        doc.write('<a target="_blank" href="' +
-            node.parentNode.href + '">' +
-            '<img src="' + node.src + '"></a> ');
+    var imageList = document.getElementById("ImageList");
+    if (imageList) {
+      document.body.removeChild(imageList);
+    } else {
+      var imageList = document.createElement("DIV");
+      imageList.id = "ImageList";
+      imageList.style.backgroundColor = "black";
+      imageList.style.marginTop = "20px";
+      imageList.style.textAlign = "center";
+      var nodes = XPath("//a[@href]/img");
+      var re = /^http:\/\/[0-9A-Za-z]+\.2chan\.net\//;
+      var html = "";
+      for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        if (re.exec(node.parentNode.href)) {
+          html += "<a target=\"_blank\" href=\"" + node.parentNode.href +
+            "\"><img src=\"" + node.src + "\"></a>";
+        }
       }
+      imageList.innerHTML = html;
+      document.body.appendChild(imageList);
     }
-    doc.write("</body></html>");
-    doc.close();
   }
 
   function addImageViewButton() {
