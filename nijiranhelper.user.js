@@ -5,6 +5,7 @@
 // @description     虹覧に新着レス数を追加する
 // @grant           GM_getValue
 // @grant           GM_setValue
+// @grant           GM_log
 // @include         http://futaba.qs.cjb.net/nijiran/*
 // @include         http://*.2chan.net/b/res/*
 // ==/UserScript==
@@ -22,35 +23,33 @@
   }
 
   function catalog() {
-    if (!/^http:\/\/futaba.qs.cjb.net\/nijiran\//.test(location.href))
-      return;
-    if (document.title == "一時ミラーページ")
-      return; 
     var nodes = XPath("//div[@class='res1']");
     var cache = eval(GM_getValue("cache", {}));
-    var key = /fCatalog_(..*)\.html$/.exec(location.href)[1];
+    var key = /fCatalog_(..*)\.html$/.exec(location.href)[1].toUpperCase();
     var count = cache[key] || {};
     var hittest = {};
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
+      if (node.childNodes.length < 2)
+        continue;
       var href = node.childNodes[0].href;
-      var resnum = parseInt(node.childNodes[1].textContent);
+      var resnum = parseInt(node.childNodes[1].textContent || "0");
       if (count[href]) {
         var diff = resnum - count[href];
         var resNew = "";
         if (diff > 0) {
           resNew = "(<span style=\"color:#ff0000\">+" + diff + "</span>)";
         } else if (diff == 0) {
-          resNew = "(0)";
+          resNew = "*";
         } else { // diff < 0
           resNew = "(<span style=\"color:#0000ff\">" + diff + "</span>)";
         }
       } else {
         // 新着エントリ
-        resNew = "(<span style=\"color:#ff0000\">NEW</span>)";
+        resNew = "!";
       }
       node.childNodes[1].innerHTML =
-        "<span style=\"font-size:0.8em\">" + resnum + resNew + "</span>";
+        "<span style=\"\">" + resnum + resNew + "</span>";
       // 見つかったエントリにはhittestをセットする
       count[href] = resnum;
       hittest[href] = true;
@@ -68,22 +67,28 @@
   }
 
   function message() {
-    if (!/http:\/\/*.2chan.net\/b\/res\//.test(location.href))
-      return;
     var cache = eval(GM_getValue("cache", {}));
     var nodes = XPath("//input[@value='delete']");
-    if (cache[key]) {
-      for (var i = 0; i < nodes.length; i++) {
-        if (i >= cache[key]) {
-          nodes[i].parentNode.style.backgroundColor = "#F0B0A6";
+    var key = /^http:\/\/(..*)\.2chan\.net\//.exec(location.href)[1].toUpperCase();
+    // i = 0 はスレ画なので使わないこと（さもないとスレ全体の背景色が変わってしまう）
+    if (cache[key] && cache[key][location.href]) {
+      for (var i = 1; i < nodes.length; i++) {
+        if (i <= cache[key][location.href]) {
+          nodes[i].parentNode.style.backgroundColor = "#FEE0D6";
+        } else {
+          nodes[i].parentNode.style.backgroundColor = "#FED0C6";
         }
       }
     }
-    cache[key] = nodes.length;
+    cache[key][location.href] = nodes.length - 1;
     GM_setValue("cache", cache.toSource());
   }
 
-  catalog();
-  message();
+  if (/^http:\/\/futaba\.qs\.cjb\.net\/nijiran\//.test(location.href) &&
+      document.title != "一時ミラーページ") {
+    catalog();
+  } else if (/^http:\/\/..*\.2chan\.net\/b\/res\//.test(location.href)) {
+    message();
+  }
 
 })();
