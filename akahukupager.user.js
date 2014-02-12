@@ -60,15 +60,15 @@
       element.dispatchEvent(evt);
     }
 
-    window.setTimeout(updateOffsets, 1000);
+    setTimeout(updateOffsets, 1000);
 
-    window.addEventListener("keydown",
+    addEventListener("keydown",
         function (e) {
           switch (e.keyCode) {
             case KEYCODE_N:
               for (var i = 0; i < messages.length; i++) {
-                if (window.scrollY < messages[i].offset) {
-                  window.scroll(window.scrollX, messages[i].offset);
+                if (scrollY < messages[i].offset) {
+                  scroll(scrollX, messages[i].offset);
                   e.preventDefault();
                   e.stopPropagation();
                   break;
@@ -77,8 +77,8 @@
               break;
             case KEYCODE_P:
               for (var i = messages.length - 1; i >= 0; i--) {
-                if (window.scrollY > messages[i].offset) {
-                  window.scroll(window.scrollX, messages[i].offset);
+                if (scrollY > messages[i].offset) {
+                  scroll(scrollX, messages[i].offset);
                   e.preventDefault();
                   e.stopPropagation();
                   break;
@@ -87,7 +87,7 @@
               break;
             case KEYCODE_O:
               for (var i = 0; i < messages.length; i++) {
-                if (window.scrollY <= messages[i].offset) {
+                if (scrollY <= messages[i].offset) {
                   if (messages[i].link) {
                     GM_openInTab(messages[i].link.href);
                     e.preventDefault();
@@ -101,7 +101,7 @@
               var button = document.getElementById("akahuku_reload_button");
               if (button) {
                 clickElement(button);
-                window.setTimeout(updateOffsets, 1000);
+                setTimeout(updateOffsets, 1000);
               }
               break;
           }
@@ -113,10 +113,14 @@
     if (imageList) {
       document.body.removeChild(imageList);
     } else {
-      var imageList = document.createElement("DIV");
+      imageList = document.createElement("DIV");
       imageList.id = "ImageList";
+      imageList.style.position = "absolute";
+      imageList.style.top = scrollY + "px";
+      imageList.style.left = "0";
+      imageList.style.zIndex = "1000";
       imageList.style.backgroundColor = "black";
-      imageList.style.marginTop = "20px";
+      imageList.style.padding = "20px";
       imageList.style.textAlign = "center";
       var nodes = XPath("//a[@href]/img");
       var re = /^http:\/\/[0-9A-Za-z]+\.2chan\.net\//;
