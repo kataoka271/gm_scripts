@@ -14,7 +14,7 @@
   function XPath(query, context) {
     var results = document.evaluate(query, context || document,
       null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
-    var nodes = new Array();
+    var nodes = [];
     for (var i = 0; i < results.snapshotLength; i++) {
       nodes.push(results.snapshotItem(i));
     }
@@ -27,36 +27,54 @@
     var key = /fCatalog_(..*)\.html$/.exec(location.href)[1].toUpperCase();
     var count = cache[key] || {};
     var hittest = {};
+    var href = "";
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
       if (node.childNodes.length < 2)
         continue;
-      var href = node.childNodes[0].href;
-      var resnum = parseInt(node.childNodes[1].textContent || "0");
-      if (count[href]) {
-        var diff = resnum - count[href];
-        var resNew = "";
-        if (diff > 0) {
-          resNew = "(<span style=\"color:#ff0000\">+" + diff + "</span>)";
-        } else if (diff == 0) {
-          resNew = "=";
-        } else { // diff < 0
-          resNew = "(<span style=\"color:#0000ff\">" + diff + "</span>)";
+      href = node.childNodes[0].href;
+      if (!count[href]) {
+        count[href] = { resNum: 0, resRead: 0 };
+      }
+      var resNum = parseInt(node.childNodes[1].textContent || "0");
+      var resNew = "";
+      var resDiff = 0;
+      if (count[href].resNum) {
+        resDiff = resNum - count[href].resNum;
+        if (resDiff > 0) {
+          resNew += "<span style=\"color:#ff0000\">+" + resDiff + "</span>";
+        } else if (resDiff === 0) {
+          resNew += "=";
+        } else { // resDiff < 0
+          resNew += "<span style=\"color:#0000ff\">" + resDiff + "</span>";
         }
       } else {
         // 新着エントリ
-        resNew = "*";
+        resNew += "*";
+      }
+      if (count[href].resRead) {
+        resDiff = resNum - count[href].resRead;
+        if (resDiff > 0) {
+          resNew += "/<span style=\"color:#ff0000\">+" + resDiff + "</span>";
+        } else if (resDiff === 0) {
+          resNew += "/=";
+        } else { // resDiff < 0
+          resNew += "/<span style=\"color:#0000ff\">" + resDiff + "</span>";
+        }
+        node.style.backgroundColor = "#ffccbb";
+      } else {
+        resNew += "/-";
       }
       node.childNodes[1].innerHTML =
-        "<span style=\"font-size:9pt\">" + resnum + resNew + "</span>";
+        "" + resNum + "<br><span style=\"font-size:8pt\">" + resNew + "</span>";
       // 見つかったエントリにはhittestをセットする
-      count[href] = resnum;
+      count[href].resNum = resNum;
       hittest[href] = true;
     }
     // hittest に見つからなかったエントリは前回のページ取得でキャッシュ
     // に登録されたかつ今回のページ取得で見つからなかったエントリなので
     // 削除する。
-    for (var href in count) {
+    for (href in count) {
       if (!hittest[href]) {
         delete count[href];
       }
@@ -72,14 +90,14 @@
     // i = 0 はスレ画なので使わないこと（さもないとスレ全体の背景色が変わってしまう）
     if (cache[key] && cache[key][location.href]) {
       for (var i = 1; i < nodes.length; i++) {
-        if (i <= cache[key][location.href]) {
+        if (i <= cache[key][location.href].resRead) {
           nodes[i].parentNode.style.backgroundColor = "#FEE0D6";
         } else {
           nodes[i].parentNode.style.backgroundColor = "#FED0C6";
         }
       }
     }
-    cache[key][location.href] = nodes.length - 1;
+    cache[key][location.href].resRead = nodes.length - 1;
     GM_setValue("cache", cache.toSource());
   }
 
