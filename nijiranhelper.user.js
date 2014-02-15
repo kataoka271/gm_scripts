@@ -44,20 +44,20 @@
         if (resDiff > 0) {
           resNew += "<span style=\"color:#ff0000\">+" + resDiff + "</span>";
         } else if (resDiff === 0) {
-          resNew += "=";
+          resNew += "0";
         } else { // resDiff < 0
           resNew += "<span style=\"color:#0000ff\">" + resDiff + "</span>";
         }
       } else {
         // 新着エントリ
-        resNew += "*";
+        resNew += "-";
       }
       if (count[href].resRead) {
         resDiff = resNum - count[href].resRead;
         if (resDiff > 0) {
           resNew += "/<span style=\"color:#ff0000\">+" + resDiff + "</span>";
         } else if (resDiff === 0) {
-          resNew += "/=";
+          resNew += "/0";
         } else { // resDiff < 0
           resNew += "/<span style=\"color:#0000ff\">" + resDiff + "</span>";
         }
