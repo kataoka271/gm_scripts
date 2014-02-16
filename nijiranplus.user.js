@@ -200,7 +200,10 @@
         var button = document.getElementById("akahuku_reload_button");
         if (button) {
           clickElement(button);
-          setTimeout(updateOffsets, 1000);
+          setTimeout(function () {
+            updateOffsets();
+            Message(true);
+          }, 1000);
         }
         break; // }}}
     }
