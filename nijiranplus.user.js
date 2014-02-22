@@ -33,6 +33,7 @@
 
   var offsets = [];
   var newResTop = 0;
+  var msgCSS = "#ImageList a { display:block; float:left; position:relative; } #ImageList a img { vertical-align:top; max-height:300px; max-width:300px; } #ImageList a .new { position:absolute; top:0; right:0; font-family:sans-serif; font-size:8pt; background-color:#f00; color:#fff; opacity:0.6; z-index:200; }";
 
   function XPath(query) { // {{{
     var results = document.evaluate(query, document, null,
@@ -53,8 +54,9 @@
     var href = "";
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
-      if (node.childNodes.length < 2)
+      if (node.childNodes.length < 2) {
         continue;
+      }
       href = node.childNodes[0].href;
       if (!count[href]) {
         count[href] = { resNum: 0, resRead: 0 };
@@ -65,11 +67,11 @@
       if (count[href].resNum) {
         resDiff = resNum - count[href].resNum;
         if (resDiff > 0) {
-          resNew += "<span style=\"color:#ff0000\">+" + resDiff + "</span>";
+          resNew += '<span style="color:#ff0000">+' + resDiff + '</span>';
         } else if (resDiff === 0) {
           resNew += "0";
         } else { // resDiff < 0
-          resNew += "<span style=\"color:#0000ff\">" + resDiff + "</span>";
+          resNew += '<span style="color:#0000ff">' + resDiff + '</span>';
         }
       } else {
         // 新着エントリ
@@ -78,18 +80,17 @@
       if (count[href].resRead) {
         resDiff = resNum - count[href].resRead;
         if (resDiff > 0) {
-          resNew += "/<span style=\"color:#ff0000\">+" + resDiff + "</span>";
+          resNew += '/<span style="color:#ff0000">+' + resDiff + '</span>';
         } else if (resDiff === 0) {
           resNew += "/0";
         } else { // resDiff < 0
-          resNew += "/<span style=\"color:#0000ff\">" + resDiff + "</span>";
+          resNew += '/<span style="color:#0000ff">' + resDiff + '</span>';
         }
         node.style.backgroundColor = "#ffccbb";
       } else {
         resNew += "/-";
       }
-      node.childNodes[1].innerHTML =
-        "" + resNum + "<br><span style=\"font-size:8pt\">" + resNew + "</span>";
+      node.childNodes[1].innerHTML = resNum + '<br><span style="font-size:8pt">' + resNew + '</span>';
       // 見つかったエントリにはhittestをセットする
       count[href].resNum = resNum;
       hittest[href] = true;
@@ -108,16 +109,16 @@
 
   function Message(display) { // {{{
     var cache = eval(GM_getValue("cache", {}));
-    var nodes = XPath("//input[@value='delete']");
+    var nodes = XPath("//input[@value='delete']/..");
     var cat = /^http:\/\/(..*)\.2chan\.net\//.exec(location.href)[1].toUpperCase();
     // i = 0 はスレ画なので使わないこと（さもないとスレ全体の背景色が
     // 変わってしまう）
     if (display && cache[cat] && cache[cat][location.href]) {
       for (var i = 1; i < nodes.length; i++) {
         if (i <= cache[cat][location.href].resRead) {
-          nodes[i].parentNode.style.backgroundColor = "#FEE0D6";
+          nodes[i].style.backgroundColor = "#FEE0D6";
         } else { // 新着
-          nodes[i].parentNode.style.backgroundColor = "#FED0C6";
+          nodes[i].style.backgroundColor = "#FED0C6";
         }
       }
     }
@@ -142,21 +143,23 @@
   } // }}}
 
   function updateOffsets() { // {{{
-    var nodes = XPath("//input[@value='delete']");
+    var nodes = XPath("//input[@value='delete']/..");
     offsets = [];
     for (var i = 0; i < nodes.length; i++) {
       var offset = absOffsetTop(nodes[i]);
-      if (offset < 0)
+      if (offset < 0) {
         continue;
-      var anchors = nodes[i].parentNode.getElementsByTagName('A');
+      }
+      var anchors = nodes[i].getElementsByTagName('A');
       var anchor;
       for (var j = 0; j < anchors.length; j++) {
         if (/^[0-9]{5}/.test(anchors[j].textContent)) {
           anchor = anchors[j];
         }
       }
-      if (!anchor)
+      if (!anchor) {
         continue;
+      }
       offsets.push({ offset: offset, anchor: anchor });
     }
   } // }}}
@@ -220,19 +223,28 @@
       imageList.style.top = window.scrollY + "px";
       imageList.style.left = "0";
       imageList.style.backgroundColor = "black";
-      imageList.style.padding = "20px";
+      imageList.style.padding = "10px";
       imageList.style.textAlign = "center";
-      imageList.style.zIndex = "1000";
-      var nodes = XPath("//a[@href]/img");
-      var html = "";
+      imageList.style.zIndex = "100";
+      var nodes = XPath("//input[@value='delete']/..");
+      var page = "";
       for (var i = 0; i < nodes.length; i++) {
-        var node = nodes[i];
-        if (/^http:\/\/..*\.2chan\.net\//.test(node.parentNode.href)) {
-          html += "<a target=\"_blank\" href=\"" + node.parentNode.href +
-            "\"><img src=\"" + node.src + "\"></a>";
+        var node = nodes[i].getElementsByTagName('IMG')[0];
+        if (!node) {
+          continue;
         }
+        var href = node.parentNode.href;
+        var src = node.src;
+        if (!/^http:\/\/..*\.2chan\.net\//.test(href)) {
+          continue;
+        }
+        page += '<a href="' + href + '" target="_blank"><img src="' + src + '">';
+        if (i >= newResTop) {
+          page += '<span class="new">NEW</span>';
+        }
+        page += "</a>";
       }
-      imageList.innerHTML = html;
+      imageList.innerHTML = page;
       document.body.appendChild(imageList);
     }
   } // }}}
@@ -253,7 +265,7 @@
     button.style.fontFamily = "sans-serif";
     button.style.fontSize = "10pt";
     button.style.padding = "5px";
-    button.style.zIndex = "1001";
+    button.style.zIndex = "200";
     button.addEventListener("click", makeImageList, false);
     document.body.appendChild(button);
   } // }}}
@@ -268,23 +280,48 @@
     button.style.fontFamily = "sans-serif";
     button.style.fontSize = "10pt";
     button.style.padding = "5px";
-    button.style.zIndex = "1001";
+    button.style.zIndex = "200";
     button.addEventListener("click", gotoNewResTop, false);
     document.body.appendChild(button);
   } // }}}
 
-  if (/^http:\/\/futaba\.qs\.cjb\.net\/nijiran\//.test(location.href) &&
-      document.title != "一時ミラーページ") {
-    Catalog();
-  } else if (/^http:\/\/..*\.2chan\.net\/b\/res\//.test(location.href)) {
-    Message(true);
-    addEventListener('load', updateOffsets, false);
-    addMakeImageListButton();
-    addGotoNewResTopButton();
-    addEventListener("keydown", onKeyDown, false);
-    addEventListener("unload", Message, false);
-  }
+  function addGlobalStyle(css) { // {{{
+    var head, style;
+    head = document.getElementsByTagName("head")[0];
+    if (!head) {
+      return;
+    }
+    style = document.createElement("style");
+    style.type = "text/css";
+    style.innerHTML = css;
+    head.appendChild(style);
+  } // }}}
+
+  function main() { // {{{
+    if (/^http:\/\/futaba\.qs\.cjb\.net\/nijiran\//.test(location.href) &&
+        document.title != "一時ミラーページ") {
+      Catalog();
+      addEventListener("keydown", function (evt) {
+        switch (evt.keyCode) {
+          case KEYCODE_S:
+            unsafeWindow.reload_check();
+            break;
+        }
+      }, false);
+    } else if (/^http:\/\/..*\.2chan\.net\/b\/res\//.test(location.href)) {
+      addGlobalStyle(msgCSS);
+      Message(true);
+      addMakeImageListButton();
+      addGotoNewResTopButton();
+      addEventListener("keydown", onKeyDown, false);
+      // レイアウト確定後でなければ正しくオフセットを計算できない
+      addEventListener('load', updateOffsets, false);
+      addEventListener("unload", Message, false);
+    }
+  } // }}}
+
+  main();
 
 })();
 
-// vi: foldmethod=marker
+// vi: foldmethod=marker ts=2 et sw=2
