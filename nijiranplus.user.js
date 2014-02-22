@@ -33,7 +33,7 @@
 
   var offsets = [];
   var newResTop = 0;
-  var msgCSS = "#ImageList a { display:block; float:left; position:relative; } #ImageList a img { vertical-align:top; max-height:300px; max-width:300px; } #ImageList a .new { position:absolute; top:0; right:0; font-family:sans-serif; font-size:8pt; background-color:#f00; color:#fff; opacity:0.6; z-index:200; }";
+  var msgCSS = "#ImageList { padding:20px; background-color:#000; text-align:center; z-index:100; } #ImageList a { position:relative; } #ImageList a img { } #ImageList a .new { position:absolute; top:0; right:0; font-family:sans-serif; font-size:8pt; background-color:#f00; color:#fff; opacity:0.6; z-index:200; }"; 
 
   function XPath(query) { // {{{
     var results = document.evaluate(query, document, null,
@@ -146,21 +146,14 @@
     var nodes = XPath("//input[@value='delete']/..");
     offsets = [];
     for (var i = 0; i < nodes.length; i++) {
-      var offset = absOffsetTop(nodes[i]);
-      if (offset < 0) {
-        continue;
+      var offset = { offset: absOffsetTop(nodes[i]) };
+      if (offset.offset == 0) {
+        continue; // 削除された記事は offset = 0 となる
       }
-      var anchors = nodes[i].getElementsByTagName('A');
-      var anchor;
-      for (var j = 0; j < anchors.length; j++) {
-        if (/^[0-9]{5}/.test(anchors[j].textContent)) {
-          anchor = anchors[j];
-        }
-      }
-      if (!anchor) {
-        continue;
-      }
-      offsets.push({ offset: offset, anchor: anchor });
+      try {
+        offset.link = nodes[i].getElementsByTagName('IMG')[0].parentNode.href;
+      } catch (e) {}
+      offsets.push(offset);
     }
   } // }}}
 
@@ -190,8 +183,8 @@
       case KEYCODE_O: // {{{
         for (i = 0; i < offsets.length; i++) {
           if (window.scrollY <= offsets[i].offset) {
-            if (offsets[i].anchor) {
-              GM_openInTab(offsets[i].anchor.href);
+            if (offsets[i].link) {
+              GM_openInTab(offsets[i].link);
               evt.preventDefault();
               evt.stopPropagation();
             }
@@ -222,10 +215,6 @@
       imageList.style.position = "absolute";
       imageList.style.top = window.scrollY + "px";
       imageList.style.left = "0";
-      imageList.style.backgroundColor = "black";
-      imageList.style.padding = "10px";
-      imageList.style.textAlign = "center";
-      imageList.style.zIndex = "100";
       var nodes = XPath("//input[@value='delete']/..");
       var page = "";
       for (var i = 0; i < nodes.length; i++) {
