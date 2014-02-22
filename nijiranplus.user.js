@@ -30,10 +30,12 @@
   var KEYCODE_P = 0x50;
   //var KEYCODE_R = 0x52;
   var KEYCODE_S = 0x53;
+  var CACHE_LIFETIME = 1000 * 60 * 60 * 24; // a day
 
   var offsets = [];
   var newResTop = 0;
   var msgCSS = "#ImageList { padding:20px; background-color:#000; text-align:center; z-index:100; } #ImageList a { position:relative; } #ImageList a img { } #ImageList a .new { position:absolute; top:0; right:0; font-family:sans-serif; font-size:8pt; background-color:#f00; color:#fff; opacity:0.6; z-index:200; }"; 
+  var catCSS = "#CacheList table { font-size:9pt; margin:0 auto; } #CacheList td { padding:2px 5px; }";
 
   function XPath(query) { // {{{
     var results = document.evaluate(query, document, null,
@@ -47,73 +49,170 @@
 
   function Catalog() { // {{{
     var nodes = XPath("//div[@class='res1']");
-    var cache = eval(GM_getValue("cache", {}));
+    var cache = JSON.parse(GM_getValue("cache", "{}")) || {};
     var cat = /fCatalog_(..*)\.html$/.exec(location.href)[1].toUpperCase();
-    var count = cache[cat] || {};
+    var entries = cache[cat] || {};
     var hittest = {};
     var href = "";
+    var now = new Date().getTime();
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
       if (node.childNodes.length < 2) {
         continue;
       }
       href = node.childNodes[0].href;
-      if (!count[href]) {
-        count[href] = { resNum: 0, resRead: 0 };
+      if (!entries[href]) {
+        entries[href] = { resNum: 0, resRead: 0, expire: 0 };
       }
-      var resNum = parseInt(node.childNodes[1].textContent || "0");
-      var resNew = "";
-      var resDiff = 0;
-      if (count[href].resNum) {
-        resDiff = resNum - count[href].resNum;
-        if (resDiff > 0) {
-          resNew += '<span style="color:#ff0000">+' + resDiff + '</span>';
-        } else if (resDiff === 0) {
-          resNew += "0";
-        } else { // resDiff < 0
-          resNew += '<span style="color:#0000ff">' + resDiff + '</span>';
-        }
-      } else {
-        // 新着エントリ
-        resNew += "-";
-      }
-      if (count[href].resRead) {
-        resDiff = resNum - count[href].resRead;
-        if (resDiff > 0) {
-          resNew += '/<span style="color:#ff0000">+' + resDiff + '</span>';
-        } else if (resDiff === 0) {
-          resNew += "/0";
-        } else { // resDiff < 0
-          resNew += '/<span style="color:#0000ff">' + resDiff + '</span>';
-        }
-        node.style.backgroundColor = "#ffccbb";
-      } else {
-        resNew += "/-";
-      }
-      node.childNodes[1].innerHTML = resNum + '<br><span style="font-size:8pt">' + resNew + '</span>';
+      addResNew(node, entries[href]);
+      entries[href].expire = now + CACHE_LIFETIME;
       // 見つかったエントリにはhittestをセットする
-      count[href].resNum = resNum;
       hittest[href] = true;
     }
     // hittest に見つからなかったエントリは前回のページ取得でキャッシュ
     // に登録されたかつ今回のページ取得で見つからなかったエントリなので
     // 削除する。
-    for (href in count) {
+    for (href in entries) {
       if (!hittest[href]) {
-        delete count[href];
+        delete entries[href];
       }
     }
-    cache[cat] = count;
-    GM_setValue("cache", cache.toSource());
+    cache[cat] = entries;
+    cleanCache(cache);
+    GM_setValue("cache", JSON.stringify(cache));
   } // }}}
 
-  function Message(display) { // {{{
-    var cache = eval(GM_getValue("cache", {}));
+  function addResNew(node, entry) { // {{{
+    var resNum = parseInt(node.childNodes[1].textContent || "0");
+    var resNew = "";
+    var resDiff = 0;
+    if (entry.resNum) { // カタログ差分
+      resDiff = resNum - entry.resNum;
+      if (resDiff > 0) {
+        resNew += '<span style="color:#ff0000">+' + resDiff + '</span>';
+      } else if (resDiff === 0) {
+        resNew += "0";
+      } else { // resDiff < 0
+        resNew += '<span style="color:#0000ff">' + resDiff + '</span>';
+      }
+    } else {
+      // 新着エントリ
+      resNew += "-";
+    }
+    if (entry.resRead) { // 既読差分
+      resDiff = resNum - entry.resRead;
+      if (resDiff > 0) {
+        resNew += '/<span style="color:#ff0000">+' + resDiff + '</span>';
+      } else if (resDiff === 0) {
+        resNew += "/0";
+      } else { // resDiff < 0
+        resNew += '/<span style="color:#0000ff">' + resDiff + '</span>';
+      }
+      node.style.backgroundColor = "#ffccbb";
+    } else {
+      resNew += "/-";
+    }
+    if (node.lastChild.style.className == "resNew") {
+      node.lastChild.innerHTML = resNew;
+    } else {
+      var info = document.createElement("div");
+      info.style.className = "resNew";
+      info.style.fontSize = "8pt";
+      info.style.clear = "both";
+      info.style.textAlign = "right";
+      info.innerHTML = resNew;
+      node.appendChild(info);
+    }
+    entry.resNum = resNum;
+  } // }}}
+
+  function onKeyDownInCat(evt) { // {{{
+    switch (evt.keyCode) {
+      case KEYCODE_S:
+        unsafeWindow.reload_check();
+        setTimeout(Catalog, 1000);
+        break;
+    }
+  } // }}}
+
+  function showCacheList() { // {{{
+    var cacheList = document.getElementById("CacheList");
+    if (cacheList) {
+      document.body.removeChild(cacheList);
+    } else {
+      var cache = JSON.parse(GM_getValue("cache", "{}")) || {};
+      var page = "";
+      for (var cat in cache) {
+        page += "<table>";
+        page += "<caption>" + cat + "</caption>";
+        page += "<tr><td>Name</td><td>ResNum</td><td>ResRead</td><td>Expire</td></tr>";
+        for (var href in cache[cat]) {
+          page += "<tr><td>" +
+              '<a href="' + href + '">' +
+              href.replace(/^..*\//, "") +
+              "</a></td><td>" +
+            cache[cat][href].resNum + "</td><td>" +
+            cache[cat][href].resRead + "</td><td>" +
+            new Date(cache[cat][href].expire).toLocaleString() + "</td></tr>";
+        }
+        page += "</table>";
+      }
+      cacheList = document.createElement("div");
+      cacheList.id = "CacheList";
+      cacheList.innerHTML = page;
+      document.body.appendChild(cacheList);
+    }
+  } // }}}
+
+  function clearCache() { // {{{
+    GM_setValue("cache", "{}");
+  } // }}}
+
+  function cleanCache(cache) { // {{{
+    var now = new Date().getTime();
+    // 有効期限切れキャッシュの削除
+    for (var cat in cache) {
+      var isEmpty = true;
+      for (var href in cache[cat]) {
+        if (cache[cat][href].expire < now) {
+          delete cache[cat][href];
+        } else {
+          isEmpty = false;
+        }
+      }
+      if (isEmpty) {
+        delete cache[cat];
+      }
+    }
+  } // }}}
+
+  function addCacheBar() { // {{{
+    var bar = document.createElement("div");
+    var a;
+    bar.style.textAlign = "right";
+    bar.style.fontFamily = "sans-serif";
+    bar.style.fontSize = "8pt";
+    a = document.createElement("a");
+    a.href = "javascript:void(0);";
+    a.innerHTML = "[Show]";
+    a.addEventListener("click", showCacheList, false);
+    bar.appendChild(a);
+    bar.appendChild(document.createTextNode(" "));
+    a = document.createElement("a");
+    a.href = "javascript:void(0);";
+    a.innerHTML = "[Clear]";
+    a.addEventListener("click", clearCache, false);
+    bar.appendChild(a);
+    document.body.appendChild(bar);
+  } // }}}
+
+  function Message(highlight) { // {{{
+    var cache = JSON.parse(GM_getValue("cache", "{}")) || {};
     var nodes = XPath("//input[@value='delete']/..");
     var cat = /^http:\/\/(..*)\.2chan\.net\//.exec(location.href)[1].toUpperCase();
     // i = 0 はスレ画なので使わないこと（さもないとスレ全体の背景色が
     // 変わってしまう）
-    if (display && cache[cat] && cache[cat][location.href]) {
+    if (highlight && cache[cat] && cache[cat][location.href]) {
       for (var i = 1; i < nodes.length; i++) {
         if (i <= cache[cat][location.href].resRead) {
           nodes[i].style.backgroundColor = "#FEE0D6";
@@ -125,7 +224,7 @@
     // 新着の先頭を指すようにする
     newResTop = cache[cat][location.href].resRead + 1;
     cache[cat][location.href].resRead = nodes.length - 1;
-    GM_setValue("cache", cache.toSource());
+    GM_setValue("cache", JSON.stringify(cache));
   } // }}}
 
   function absOffsetTop(element) { // {{{
@@ -151,13 +250,13 @@
         continue; // 削除された記事は offset = 0 となる
       }
       try {
-        offset.link = nodes[i].getElementsByTagName('IMG')[0].parentNode.href;
+        offset.link = nodes[i].getElementsByTagName("IMG")[0].parentNode.href;
       } catch (e) {}
       offsets.push(offset);
     }
   } // }}}
 
-  function onKeyDown(evt) { // {{{
+  function onKeyDownInRes(evt) { // {{{
     var i = 0;
     switch (evt.keyCode) {
       case KEYCODE_N: // {{{
@@ -210,7 +309,7 @@
     if (imageList) {
       document.body.removeChild(imageList);
     } else {
-      imageList = document.createElement("DIV");
+      imageList = document.createElement("div");
       imageList.id = "ImageList";
       imageList.style.position = "absolute";
       imageList.style.top = window.scrollY + "px";
@@ -218,7 +317,7 @@
       var nodes = XPath("//input[@value='delete']/..");
       var page = "";
       for (var i = 0; i < nodes.length; i++) {
-        var node = nodes[i].getElementsByTagName('IMG')[0];
+        var node = nodes[i].getElementsByTagName("IMG")[0];
         if (!node) {
           continue;
         }
@@ -245,7 +344,7 @@
   } // }}}
 
   function addMakeImageListButton() { // {{{
-    var button = document.createElement("A");
+    var button = document.createElement("a");
     button.href = "javascript:void(0);";
     button.innerHTML = "■";
     button.style.position = "fixed";
@@ -260,7 +359,7 @@
   } // }}}
 
   function addGotoNewResTopButton() { // {{{
-    var button = document.createElement("A");
+    var button = document.createElement("a");
     button.href = "javascript:void(0);";
     button.innerHTML = "▼";
     button.style.position = "fixed";
@@ -289,22 +388,18 @@
   function main() { // {{{
     if (/^http:\/\/futaba\.qs\.cjb\.net\/nijiran\//.test(location.href) &&
         document.title != "一時ミラーページ") {
+      addGlobalStyle(catCSS);
       Catalog();
-      addEventListener("keydown", function (evt) {
-        switch (evt.keyCode) {
-          case KEYCODE_S:
-            unsafeWindow.reload_check();
-            break;
-        }
-      }, false);
+      addCacheBar();
+      addEventListener("keydown", onKeyDownInCat, false);
     } else if (/^http:\/\/..*\.2chan\.net\/b\/res\//.test(location.href)) {
       addGlobalStyle(msgCSS);
       Message(true);
       addMakeImageListButton();
       addGotoNewResTopButton();
-      addEventListener("keydown", onKeyDown, false);
+      addEventListener("keydown", onKeyDownInRes, false);
       // レイアウト確定後でなければ正しくオフセットを計算できない
-      addEventListener('load', updateOffsets, false);
+      addEventListener("load", updateOffsets, false);
       addEventListener("unload", Message, false);
     }
   } // }}}
