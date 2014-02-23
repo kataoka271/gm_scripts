@@ -34,7 +34,7 @@
 
   var offsets = [];
   var newResTop = 0;
-  var msgCSS = "#ImageList { padding:20px; background-color:#000; text-align:center; z-index:100; } #ImageList a { position:relative; } #ImageList a img { } #ImageList a .new { position:absolute; top:0; right:0; font-family:sans-serif; font-size:8pt; background-color:#f00; color:#fff; opacity:0.6; z-index:200; }"; 
+  var msgCSS = "#ImageList { padding:20px; background-color:#000; text-align:center; z-index:100; } #ImageList a { border:1px solid #ccc; margin:2px; display:inline-block; position:relative; } #ImageList a img { vertical-align:top; } #ImageList a .new { position:absolute; top:0; right:0; font-family:sans-serif; font-size:8pt; background-color:#f00; color:#fff; opacity:0.6; z-index:200; }"; 
   var catCSS = "#CacheList table { font-size:9pt; margin:0 auto; } #CacheList td { padding:2px 5px; }";
 
   function XPath(query) { // {{{
