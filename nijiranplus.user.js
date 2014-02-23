@@ -304,7 +304,7 @@
     }
   } // }}}
 
-  function makeImageList() { // {{{
+  function makeImageList(newest) { // {{{
     var imageList = document.getElementById("ImageList");
     if (imageList) {
       document.body.removeChild(imageList);
@@ -326,11 +326,11 @@
         if (!/^http:\/\/..*\.2chan\.net\//.test(href)) {
           continue;
         }
-        page += '<a href="' + href + '" target="_blank"><img src="' + src + '">';
         if (i >= newResTop) {
-          page += '<span class="new">NEW</span>';
+          page += '<a href="' + href + '" target="_blank"><img src="' + src + '"><span class="new">NEW</span></a>';
+        } else if (!newest) {
+          page += '<a href="' + href + '" target="_blank"><img src="' + src + '"></a>';
         }
-        page += "</a>";
       }
       imageList.innerHTML = page;
       document.body.appendChild(imageList);
@@ -343,33 +343,18 @@
     }
   } // }}}
 
-  function addMakeImageListButton() { // {{{
+  function addButton(label, right, func) { // {{{
     var button = document.createElement("a");
     button.href = "javascript:void(0);";
-    button.innerHTML = "■";
+    button.innerHTML = label;
     button.style.position = "fixed";
     button.style.bottom = "0";
-    button.style.right = "0";
+    button.style.right = right;
     button.style.fontFamily = "sans-serif";
     button.style.fontSize = "10pt";
     button.style.padding = "5px";
     button.style.zIndex = "200";
-    button.addEventListener("click", makeImageList, false);
-    document.body.appendChild(button);
-  } // }}}
-
-  function addGotoNewResTopButton() { // {{{
-    var button = document.createElement("a");
-    button.href = "javascript:void(0);";
-    button.innerHTML = "▼";
-    button.style.position = "fixed";
-    button.style.bottom = "0";
-    button.style.right = "1.5em";
-    button.style.fontFamily = "sans-serif";
-    button.style.fontSize = "10pt";
-    button.style.padding = "5px";
-    button.style.zIndex = "200";
-    button.addEventListener("click", gotoNewResTop, false);
+    button.addEventListener("click", func, false);
     document.body.appendChild(button);
   } // }}}
 
@@ -395,8 +380,9 @@
     } else if (/^http:\/\/..*\.2chan\.net\/b\/res\//.test(location.href)) {
       addGlobalStyle(msgCSS);
       Message(true);
-      addMakeImageListButton();
-      addGotoNewResTopButton();
+      addButton("■", "0", function () { makeImageList(false); });
+      addButton("★", "1.5em", function () { makeImageList(true); });
+      addButton("▼", "3.0em", gotoNewResTop);
       addEventListener("keydown", onKeyDownInRes, false);
       // レイアウト確定後でなければ正しくオフセットを計算できない
       addEventListener("load", updateOffsets, false);
