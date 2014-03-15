@@ -34,7 +34,7 @@
 
   var offsets = [];
   var newResTop = 0;
-  var msgCSS = "#ImageList { padding:20px; background-color:#000; text-align:center; z-index:100; } #ImageList a { border:1px solid #ccc; margin:2px; display:inline-block; position:relative; } #ImageList a img { vertical-align:top; } #ImageList a .new { position:absolute; top:0; right:0; font-family:sans-serif; font-size:8pt; background-color:#f00; color:#fff; opacity:0.6; z-index:200; }"; 
+  var msgCSS = "#ImageList { background-color:rgba(0,0,0,0.8); margin:0; padding:0; height:100%; width:100%; text-align:center; z-index:100; } #ImageListInner { overflow:auto; position:absolute; left:0; top:0; right:0; bottom:0; } #ImageList a { border:1px solid #ccc; margin:2px; display:inline-block; position:relative; } #ImageList a img { vertical-align:top; } #ImageList a .new { position:absolute; top:0; right:0; font-family:sans-serif; font-size:8pt; background-color:#f00; color:#fff; opacity:0.6; z-index:200; }"; 
   var catCSS = "#CacheList table { font-size:9pt; margin:0 auto; } #CacheList td { padding:2px 5px; }";
 
   function XPath(query) { // {{{
@@ -311,11 +311,14 @@
     } else {
       imageList = document.createElement("div");
       imageList.id = "ImageList";
-      imageList.style.position = "absolute";
-      imageList.style.top = window.scrollY + "px";
+      imageList.style.position = "fixed";
+      imageList.style.top = "0";
       imageList.style.left = "0";
+      //imageList.style.position = "absolute";
+      //imageList.style.top = window.scrollY + "px";
+      //imageList.style.left = "0";
       var nodes = XPath("//input[@value='delete']/..");
-      var page = "";
+      var page = '<div id="ImageListInner">';
       for (var i = 0; i < nodes.length; i++) {
         var node = nodes[i].getElementsByTagName("IMG")[0];
         if (!node) {
@@ -332,8 +335,17 @@
           page += '<a href="' + href + '" target="_blank"><img src="' + src + '"></a>';
         }
       }
-      imageList.innerHTML = page;
+      page += "</div>";
       document.body.appendChild(imageList);
+      imageList.innerHTML = page;
+      imageList.firstChild.firstChild.focus();
+      imageList.addEventListener('dblclick', function (evt) {
+        if (evt.target.id == 'ImageList') {
+          document.body.removeChild(evt.target);
+        } else if (evt.target.id == 'ImageListInner') {
+          document.body.removeChild(evt.target.parentNode);
+        }
+      }, false);
     }
   } // }}}
 
