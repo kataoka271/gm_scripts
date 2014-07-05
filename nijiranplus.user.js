@@ -8,7 +8,7 @@
 // @grant           GM_setValue
 // @grant           GM_log
 // @include         http://*.2chan.net/b/res/*
-// @include         http://futaba.qs.cjb.net/nijiran/*
+// @include         http://nijiran.hobby-site.org/nijiran/*
 // ==/UserScript==
 
 /* == 注意事項
@@ -30,7 +30,7 @@
   var KEYCODE_P = 0x50;
   //var KEYCODE_R = 0x52;
   var KEYCODE_S = 0x53;
-  var CACHE_LIFETIME = 1000 * 60 * 60 * 24; // a day
+  var CACHE_LIFETIME = 3 * 1000 * 60 * 60 * 24; // a day
 
   var offsets = [];
   var newResTop = 0;
@@ -210,11 +210,20 @@
     var cache = JSON.parse(GM_getValue("cache", "{}")) || {};
     var nodes = XPath("//input[@value='delete']/..");
     var cat = /^http:\/\/(..*)\.2chan\.net\//.exec(location.href)[1].toUpperCase();
+    if (!cache[cat]) {
+      cache[cat] = {};
+    }
+    var entry = cache[cat][location.href];
+    if (!entry) {
+      entry = { resNum: nodes.length,
+                resRead: 0,
+                expire: new Date().getTime() + CACHE_LIFETIME };
+    }
     // i = 0 はスレ画なので使わないこと（さもないとスレ全体の背景色が
     // 変わってしまう）
-    if (highlight && cache[cat] && cache[cat][location.href]) {
+    if (highlight) {
       for (var i = 1; i < nodes.length; i++) {
-        if (i <= cache[cat][location.href].resRead) {
+        if (i <= entry.resRead) {
           nodes[i].style.backgroundColor = "#FEE0D6";
         } else { // 新着
           nodes[i].style.backgroundColor = "#FED0C6";
@@ -222,8 +231,9 @@
       }
     }
     // 新着の先頭を指すようにする
-    newResTop = cache[cat][location.href].resRead + 1;
-    cache[cat][location.href].resRead = nodes.length - 1;
+    newResTop = entry.resRead + 1;
+    entry.resRead = nodes.length - 1;
+    cache[cat][location.href] = entry;
     GM_setValue("cache", JSON.stringify(cache));
   } // }}}
 
@@ -383,7 +393,7 @@
   } // }}}
 
   function main() { // {{{
-    if (/^http:\/\/futaba\.qs\.cjb\.net\/nijiran\//.test(location.href) &&
+    if (/^http:\/\/nijiran.hobby-site.org\/nijiran\//.test(location.href) &&
         document.title != "一時ミラーページ") {
       addGlobalStyle(catCSS);
       Catalog();
