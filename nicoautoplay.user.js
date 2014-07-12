@@ -4,17 +4,18 @@
 // @include        http://www.nicovideo.jp/watch/*
 // @version        1.0.0
 // @description    ニコニコ動画で動画を自動再生できるようにする
+// @grant          GM_log
 // ==/UserScript==
 
 (function(){
 
-  if(document.getElementById('nicoplayerContainerInner')){
-    var w = unsafeWindow;
-    var f = w.WatchApp.ns.model.player.NicoPlayerConnector.onVideoInitialized;
-    w.WatchApp.ns.model.player.NicoPlayerConnector.onVideoInitialized = function () {
-      f.apply(this, arguments);
-      w.WatchApp.namespace.model.player.NicoPlayerConnector.playVideo();
-    };
+  if (document.getElementById('nicoplayerContainerInner')) {
+
+    var script = document.createElement("script");
+    script.type = 'text/javascript';
+    script.textContent = 'WatchApp.ns.init.PlayerInitializer.nicoPlayerConnector.playerAreaConnector.addEventListener("onVideoInitialized",function(){WatchApp.ns.model.player.NicoPlayerConnector.playVideo();});';
+    document.body.appendChild(script);
+
   }
 
 })();
