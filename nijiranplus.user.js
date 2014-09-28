@@ -402,9 +402,11 @@
     } else if (/^http:\/\/..*\.2chan\.net\/b\/res\//.test(location.href)) {
       addGlobalStyle(msgCSS);
       Message(true);
-      addButton("■", "0", function () { makeImageList(false); });
-      addButton("★", "1.5em", function () { makeImageList(true); });
-      addButton("▼", "3.0em", gotoNewResTop);
+      addEventListener("load", function () {
+        addButton("■", "0", function () { makeImageList(false); });
+        addButton("★", "1.5em", function () { makeImageList(true); });
+        addButton("▼", "3.0em", gotoNewResTop);
+      }, false);
       addEventListener("keydown", onKeyDownInRes, false);
       // レイアウト確定後でなければ正しくオフセットを計算できない
       addEventListener("load", updateOffsets, false);
